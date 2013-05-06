@@ -1,18 +1,16 @@
 TUSRC=$(wildcard *.t*)
-PYSRC=$(wildcard *.py)
+PYSRC=tron_sample.py tron-win32.py
 SRC=$(TUSRC) $(PYSRC)
 OUT=tron.zip tron-win32.zip
 all:$(OUT)
 tron-win32-support/__main__.py:tron.py
 	cp $< $@
-tron-win32-support/__init__.py:
-	echo 'from __main__ import *'
-tron-win32-support:tron-win32-support/__main__.py tron-win32-support/__init__.py
-tron-win32:tron-win32-support $(SRC)
+tron-win32:tron-win32-support/__main__.py $(SRC)
 	rm -rf tron-win32/
 	mkdir tron-win32/
 	cp tron_sample.py $(TUSRC) tron-win32/
-	cd tron-win32-support/ && zip -rq ../tron-win32/tron.py * -x \*.pyc
+	cp tron-win32.py tron-win32/tron.py
+	cd tron-win32-support/ && zip -rq ../tron-win32/tron-win32-support.zip * -x \*.pyc
 tron-win32.zip:tron-win32
 	zip -rq $@ $<
 tron.zip:$(SRC)
