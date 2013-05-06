@@ -1,5 +1,5 @@
 TUSRC=$(wildcard *.t*)
-PYSRC=tron_sample.py tron-win32.py
+PYSRC=tron_sample.py tron.py
 SRC=$(TUSRC) $(PYSRC)
 OUT=tron.zip tron-win32.zip
 all:$(OUT)
