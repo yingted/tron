@@ -128,7 +128,7 @@ def alphabeta(me,you,alpha=-float("inf")):
 	print"hope for",alpha
 	return moves
 tron=TronClient()
-tron.start("negamax-0.1","35fad903-2ed3-4c95-8e91-bae44dbc52c3","192.168.0.4")
+tron.start("negamax-0.1","35fad903-2ed3-4c95-8e91-bae44dbc52c3","localhost")
 while not tron.ended():
 	me=tron.x,tron.y
 	you=next((i,j)for i in xrange(50)for j in xrange(49)if tron.full[i][j]and not a[i][j]and(i,j)!=me)

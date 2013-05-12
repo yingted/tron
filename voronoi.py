@@ -59,7 +59,7 @@ def wallhug(me,depth=3,theta=None):
 			return[(x,y)]
 	return[]
 angle=None
-for tron in TronClient("voronoi-0.1","35fad903-2ed3-4c95-8e91-bae44dbc52c3","192.168.0.4"):
+for tron in TronClient("voronoi-0.1","35fad903-2ed3-4c95-8e91-bae44dbc52c3","localhost"):
 	if angle is None:
 		angle=cmp(tron.x,24)+1
 	me=tron.x,tron.y
