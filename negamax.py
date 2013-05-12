@@ -73,16 +73,7 @@ class TronClient(object):
 from random import choice
 a=[[False]*49 for _ in xrange(50)]
 def near(x,y):
-	for nx,ny in(x-1,y),(x+1,y),(x,y-1),(x,y+1):
-		if 0<=nx<50 and 0<=ny<49 and not a[nx][ny]:
-			yield nx,ny
-def near_ordered(me,you):
-	pts=[]
-	for p in near(me[0],me[1]):
-		a[p[0]][p[1]]=True
-		pts.append((-val(p,you),p))
-		a[p[0]][p[1]]=False
-	return[x[1]for x in sorted(pts)]
+	return[(nx,ny)for nx,ny in(x-1,y),(x+1,y),(x,y-1),(x,y+1)if 0<=nx<50 and 0<=ny<49 and not a[nx][ny]]
 def bfs(me):
 	q=[me]
 	dist=[[OO]*49 for _ in xrange(50)]
@@ -98,14 +89,14 @@ def val(me,you):
 	dme=bfs(me)
 	dyou=bfs(you)
 	for x,y in near(me[0],me[1]):
-		if dyou[x][y]!=OO:
+		if dyou[x][y]is not OO:
 			return sum(cmp(x,y)for row in map(zip,dyou,dme)for x,y in row)
-	return 20*(sum(v is OO for row in dyou for v in row)-sum(v is OO for row in dme for v in row))+88*(sum(len(list(near(i,j)))for i in xrange(50)for j in xrange(49)if dme[i][j]!=OO)-sum(len(list(near(i,j)))for i in xrange(50)for j in xrange(49)if dyou[i][j]!=OO))
+	return 20*(sum(v is OO for row in dyou for v in row)-sum(v is OO for row in dme for v in row))+88*(sum(len(near(i,j))for i in xrange(50)for j in xrange(49)if dme[i][j]is not OO)-sum(len(near(i,j))for i in xrange(50)for j in xrange(49)if dyou[i][j]is not OO))
 def negamax((mex,mey),(youx,youy),depth,alpha,beta):
 	if not depth:
 		return val((mex,mey),(youx,youy))
 	you=youx,youy
-	for nx,ny in near_ordered((mex,mey),you):
+	for nx,ny in near(mex,mey):
 		a[nx][ny]=True
 		v=-negamax(you,(nx,ny),depth-1,-beta,-alpha)
 		a[nx][ny]=False
@@ -117,7 +108,7 @@ def negamax((mex,mey),(youx,youy),depth,alpha,beta):
 def alphabeta(me,you,alpha=-OO):
 	"""gets moves from negamax by expanding out the first ply"""
 	moves=[]
-	for x,y in near_ordered(me,you):
+	for x,y in near(me[0],me[1]):
 		pos=x,y
 		assert not a[x][y]
 		a[x][y]=True
@@ -130,17 +121,27 @@ def alphabeta(me,you,alpha=-OO):
 			moves.append(pos)
 	print"hope for",alpha
 	return moves
-tron=TronClient()
-tron.start("negamax-0.1","35fad903-2ed3-4c95-8e91-bae44dbc52c3","localhost")
-while not tron.ended():
-	me=tron.x,tron.y
-	you=next((i,j)for i in xrange(50)for j in xrange(49)if tron.full[i][j]and not a[i][j]and(i,j)!=me)
-	a=[row[:]for row in tron.full]#shed skin hates me
-	print"val",val(me,you)
-	moves=alphabeta(me,you)
-	if moves:
-		tron.x,tron.y=choice(moves)
-	else:
-		print"no moves"
-		tron.x+=1
-print tron
+from time import time
+import sys
+sys.setcheckinterval(sys.maxint)
+def main():
+	global a
+	tron=TronClient()
+	tron.start("negamax-0.1","35fad903-2ed3-4c95-8e91-bae44dbc52c3","localhost")
+	while not tron.ended():
+		starttime=time()
+		me=tron.x,tron.y
+		you=next((i,j)for i in xrange(50)for j in xrange(49)if tron.full[i][j]and not a[i][j]and(i,j)!=me)
+		a=[row[:]for row in tron.full]#shed skin hates me
+		#print"val",val(me,you)
+		moves=alphabeta(me,you)
+		if moves:
+			tron.x,tron.y=choice(moves)
+		else:
+			print"no moves"
+			tron.x+=1
+		print time()-starttime
+	print tron
+main()
+#import cProfile
+#cProfile.run("main()")
