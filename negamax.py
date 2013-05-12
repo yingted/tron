@@ -74,13 +74,16 @@ def near(x,y):
 		if 0<=nx<50 and 0<=ny<49 and not a[nx][ny]:
 			yield nx,ny
 def near_ordered(me,you):
-	return[p for _,p in sorted([(-val(p,you),p)for p in near(me[0],me[1])])]
+	pts=[]
+	for p in near(me[0],me[1]):
+		a[p[0]][p[1]]=True
+		pts.append((-val(p,you),p))
+		a[p[0]][p[1]]=False
+	return[x[1]for x in sorted(pts)]
 def bfs(me,inf=float("inf")):
 	q=[me]
 	dist=[[inf]*49 for _ in xrange(50)]
 	dist[me[0]][me[1]]=0
-	seen=set()
-	seen.add(me)
 	for x,y in q:
 		d=dist[x][y]+1
 		for nx,ny in near(x,y):
@@ -92,44 +95,37 @@ def val(me,you):
 	dme=bfs(me)
 	dyou=bfs(you)
 	for x,y in near(me[0],me[1]):
-		if dyou[x][y]==float("inf"):
+		if dyou[x][y]!=float("inf"):
 			return sum(cmp(x,y)for row in map(zip,dyou,dme)for x,y in row)
-	return 20*(sum(v==float("inf")for row in dyou for v in row)-sum(v==float("inf")for row in dme for v in row))
+	return 20*(sum(v==float("inf")for row in dyou for v in row)-sum(v==float("inf")for row in dme for v in row))+88*(sum(len(list(near(i,j)))for i in xrange(50)for j in xrange(49)if not a[i][j]))
 def negamax((mex,mey),(youx,youy),depth,alpha,beta):
 	if not depth:
 		return val((mex,mey),(youx,youy))
-	a[mex][mey]=True
 	you=youx,youy
 	for nx,ny in near_ordered((mex,mey),you):
-		if not a[nx][ny]:
-			v=-negamax(you,(nx,ny),depth-1,-beta,-alpha)
-			if v>=beta:
-				a[mex][mey]=False
-				return v
-			if v>alpha:
-				alpha=v
-	a[mex][mey]=False
+		a[nx][ny]=True
+		v=-negamax(you,(nx,ny),depth-1,-beta,-alpha)
+		a[nx][ny]=False
+		if v>=beta:
+			return v
+		if v>alpha:
+			alpha=v
 	return alpha
 def alphabeta(me,you,alpha=-float("inf")):
-	"""gets moves from negamax by expanding out the first 2 plies"""
+	"""gets moves from negamax by expanding out the first ply"""
 	moves=[]
-	for mex,mey in near_ordered(me,you):
-		if not a[mex][mey]:
-			pos=mex,mey
-			beta=float("inf")
-			for nx,ny in near_ordered(you,pos):
-				if not a[nx][ny]:
-					v=negamax(pos,(nx,ny),2,alpha,beta)
-					if v<beta:
-						beta=v
-					if v<=alpha:
-						break
-			if beta>alpha:
-				alpha=beta
-				moves=[]
-			if beta==alpha:
-				moves.append((mex,mey))
-	print"hoped alpha",alpha
+	for x,y in near_ordered(me,you):
+		pos=x,y
+		assert not a[x][y]
+		a[x][y]=True
+		v=-negamax(you,pos,3,-float("inf"),1-alpha)
+		a[x][y]=False
+		if v>alpha:
+			alpha=v
+			moves=[]
+		if v==alpha:
+			moves.append(pos)
+	print"hope for",alpha
 	return moves
 tron=TronClient()
 tron.start("negamax-0.1","35fad903-2ed3-4c95-8e91-bae44dbc52c3","192.168.0.4")
@@ -141,5 +137,6 @@ while not tron.ended():
 	try:
 		tron.x,tron.y=choice(alphabeta(me,you))
 	except IndexError:
-		pass
+		print"no good moves"
+		tron.x+=1
 print tron
