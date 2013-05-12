@@ -1,8 +1,8 @@
 #!/usr/bin/python
 from struct import calcsize,unpack,pack
-TCP_NODELAY=1
 import socket
-STRUCT_DOWN_FRAME="<iii307s"#"<iii%ds"%((50*49+7)/8)
+TCP_NODELAY=1
+STRUCT_DOWN_FRAME="<iii307s"
 STRUCT_UP_MOVE="<iii"
 STRUCT_UP_LOGIN="<256s256s"
 IPPROTO_TCP=6
@@ -10,6 +10,7 @@ TCP_NODELAY=1
 TCP_QUICKACK=12
 SHUT_RDWR=2
 PORT=12345
+OO=float("inf")
 class TronClient(object):
 	"""non-threadsafe client which mimics the Turing API"""
 	OUTCOME="tie","win","lose","tie"
@@ -67,6 +68,8 @@ class TronClient(object):
 		except:
 			pass
 		self.sock=None
+	def __repr__(self):
+		return"<%s@%d/%d (%d,%d) %s>"%(self.__class__.__name__,self.dropped,self.t,self.x,self.y,self.outcome)
 from random import choice
 a=[[False]*49 for _ in xrange(50)]
 def near(x,y):
@@ -80,14 +83,14 @@ def near_ordered(me,you):
 		pts.append((-val(p,you),p))
 		a[p[0]][p[1]]=False
 	return[x[1]for x in sorted(pts)]
-def bfs(me,inf=float("inf")):
+def bfs(me):
 	q=[me]
-	dist=[[inf]*49 for _ in xrange(50)]
+	dist=[[OO]*49 for _ in xrange(50)]
 	dist[me[0]][me[1]]=0
 	for x,y in q:
 		d=dist[x][y]+1
 		for nx,ny in near(x,y):
-			if dist[nx][ny]is inf:
+			if dist[nx][ny]is OO:
 				dist[nx][ny]=d
 				q.append((nx,ny))
 	return dist
@@ -95,9 +98,9 @@ def val(me,you):
 	dme=bfs(me)
 	dyou=bfs(you)
 	for x,y in near(me[0],me[1]):
-		if dyou[x][y]!=float("inf"):
+		if dyou[x][y]!=OO:
 			return sum(cmp(x,y)for row in map(zip,dyou,dme)for x,y in row)
-	return 20*(sum(v==float("inf")for row in dyou for v in row)-sum(v==float("inf")for row in dme for v in row))+88*(sum(len(list(near(i,j)))for i in xrange(50)for j in xrange(49)if not a[i][j]))
+	return 20*(sum(v is OO for row in dyou for v in row)-sum(v is OO for row in dme for v in row))+88*(sum(len(list(near(i,j)))for i in xrange(50)for j in xrange(49)if dme[i][j]!=OO)-sum(len(list(near(i,j)))for i in xrange(50)for j in xrange(49)if dyou[i][j]!=OO))
 def negamax((mex,mey),(youx,youy),depth,alpha,beta):
 	if not depth:
 		return val((mex,mey),(youx,youy))
@@ -111,14 +114,14 @@ def negamax((mex,mey),(youx,youy),depth,alpha,beta):
 		if v>alpha:
 			alpha=v
 	return alpha
-def alphabeta(me,you,alpha=-float("inf")):
+def alphabeta(me,you,alpha=-OO):
 	"""gets moves from negamax by expanding out the first ply"""
 	moves=[]
 	for x,y in near_ordered(me,you):
 		pos=x,y
 		assert not a[x][y]
 		a[x][y]=True
-		v=-negamax(you,pos,3,-float("inf"),1-alpha)
+		v=-negamax(you,pos,3,-OO,1-alpha)
 		a[x][y]=False
 		if v>alpha:
 			alpha=v
@@ -132,11 +135,12 @@ tron.start("negamax-0.1","35fad903-2ed3-4c95-8e91-bae44dbc52c3","localhost")
 while not tron.ended():
 	me=tron.x,tron.y
 	you=next((i,j)for i in xrange(50)for j in xrange(49)if tron.full[i][j]and not a[i][j]and(i,j)!=me)
-	a=[[v for v in row]for row in tron.full]
+	a=[row[:]for row in tron.full]#shed skin hates me
 	print"val",val(me,you)
-	try:
-		tron.x,tron.y=choice(alphabeta(me,you))
-	except IndexError:
-		print"no good moves"
+	moves=alphabeta(me,you)
+	if moves:
+		tron.x,tron.y=choice(moves)
+	else:
+		print"no moves"
 		tron.x+=1
 print tron

@@ -72,5 +72,6 @@ for tron in TronClient("voronoi-0.1","35fad903-2ed3-4c95-8e91-bae44dbc52c3","loc
 		angle=circle(me).index((tron.x,tron.y))
 	except IndexError:
 		print"no good moves"
+		tron.x+=1
 	print"\n".join([" ".join("#"if y else" "for y in x)for x in reversed(zip(*tron.full))])
 print tron

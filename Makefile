@@ -1,7 +1,7 @@
 TUSRC=$(wildcard *.t*)
 PYSRC=tron_sample.py tron.py
 SRC=$(TUSRC) $(PYSRC)
-OUT=tron.zip tron-win32.zip negamax
+OUT=tron.zip tron-win32.zip negamax/negamax
 all:$(OUT)
 tron-win32-support/__main__.py:tron.py
 	cp $< $@
@@ -22,11 +22,11 @@ negamax/negamax.cpp:negamax.py mainline
 	rm -rf negamax
 	mkdir -p negamax
 	cp negamax{.py,}
-	cd negamax && PYTHONPATH=../mainline/build/lib python -c 'import shedskin;shedskin.main()' negamax.py
+	cd negamax && PYTHONPATH=../mainline/build/lib python -c 'import shedskin;shedskin.main()' -bors negamax.py
 negamax/negamax:negamax/negamax.cpp
-	cd negamax && make
-negamax:negamax/negamax
-	cp {negamax/,}negamax
+	cd negamax && make CPPFLAGS='-O3 -ffast-math -fomit-frame-pointer'
+gprof2dot.py:
+	wget 'http://gprof2dot.jrfonseca.googlecode.com/git/gprof2dot.py'
 clean:
 	rm -f $(OUT) $(wildcard tron-win32-support/__*__.py)
 	rm -rf tron-win32/
