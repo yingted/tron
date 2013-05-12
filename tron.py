@@ -6,7 +6,7 @@ from twisted.protocols.stateful import StatefulProtocol
 from random import shuffle
 from threading import Lock
 from struct import calcsize,unpack,pack
-from socket import create_connection
+from socket import create_connection,SHUT_RDWR
 from collections import Counter,Iterable
 import socket
 for const in"IPPROTO_TCP","TCP_QUICKACK","TCP_NODELAY":
@@ -80,7 +80,7 @@ class Game(object):
 				self.state[i]=nx,ny,nx*2-x,ny*2-y
 			count=Counter(state[:2]for state in self.state)
 			for i,(x,y,nx,ny)in enumerate(self.state):
-				if not(0<=nx<50 and 0<=ny<49)or self.grid[x][y]or count[x,y]>1:
+				if not(0<=x<50 and 0<=y<49)or self.grid[x][y]or count[x,y]>1:
 					self.state[i]=None
 		if self.over():
 			if self.delay:
@@ -211,7 +211,7 @@ class TronClient(object):
 		if user is not None:
 			buf+='L'+pack(STRUCT_UP_LOGIN,user,pw)
 		buf+='S'
-		self.sock.send(buf)
+		self.sock.sendall(buf)
 	startlogin=start
 	def _recv(self):
 		self._t,self._x,self._y,a=unpack(STRUCT_DOWN_FRAME,self.sock.recv(calcsize(STRUCT_DOWN_FRAME)))
@@ -226,7 +226,7 @@ class TronClient(object):
 			self.x=self._x
 			self.y=self._y
 		else:
-			self.sock.close()
+			self._close()
 			outcome=self.OUTCOME[self._y+1]
 			self.__init__()
 			self.outcome=outcome
@@ -256,12 +256,14 @@ class TronClient(object):
 		try:
 			if self.t>=0:
 				assert abs(self._x-self.x)+abs(self._y-self.y)<=self.t-self._t
-				self.sock.send(pack(STRUCT_UP_MOVE,self.t+1,self.x+1,self.y+1))
+				self.sock.sendall(pack(STRUCT_UP_MOVE,self.t+1,self.x+1,self.y+1))
 			self._recv()
 		except IOError:
 			self._close()
 		return not self.sock
 	def _close(self):
+		if self.sock:
+			self.sock.shutdown(SHUT_RDWR)
 		try:
 			self.sock.close()
 		except:
