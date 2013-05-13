@@ -42,8 +42,8 @@ def goodmoves(me,you):
 		if v==best:
 			moves.append((mex,mey))
 	if best[1]and len(moves)>1:
-		moves=wallhug(me,10)or wallhug(me,3)or wallhug(me,1)
-	return moves
+		moves=wallhug(me,10)or wallhug(me,3)
+	return moves or wallhug(me,1)
 def wallhug(me,depth=3,theta=None):
 	if theta is None:
 		theta=angle
