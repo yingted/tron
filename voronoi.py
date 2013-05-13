@@ -1,15 +1,32 @@
 #!/usr/bin/python
 from tron import TronClient
 from random import choice
+from signal import signal,setitimer,SIGALRM,SIG_IGN,SIG_DFL,ITIMER_REAL
+class FrameSkip(Exception):pass
+def raise_frameskip(signum,frame):
+	raise FrameSkip()
+class guard(object):
+	def __enter__(self):
+		signal(SIGALRM,raise_frameskip)
+	def __exit__(*args):
+		signal(SIGALRM,SIG_IGN)
+class every(object):
+	def __init__(self,*spec):
+		self.spec=spec
+	def __enter__(self):
+		setitimer(ITIMER_REAL,*self.spec)
+		return guard()
+	def __exit__(*args):
+		signal(SIGALRM,SIG_DFL)
+		setitimer(ITIMER_REAL,0)
 a=[[False]*49 for _ in xrange(50)]
 def good(x,y):
 	return 0<=x<50 and 0<=y<49 and not a[x][y]
-def circle(me):
-	return[tuple(map(int.__add__,me,p))for p in((1,0),(0,1),(-1,0),(0,-1))]
+def circle((x,y)):
+	return(x+1,y),(x,y+1),(x-1,y),(x,y-1)
 def near(x,y):
-	for nx,ny in circle((x,y)):
-		if good(nx,ny):
-			yield nx,ny
+	#return[(nx,ny)for nx,ny in circle((x,y))if good(nx,ny)]
+	return[(nx,ny)for nx,ny in circle((x,y))if(0<=nx<50 and 0<=ny<49 and not a[nx][ny])]
 def bfs(me,inf=float("inf")):
 	q=[me]
 	dist=[[inf]*49 for _ in xrange(50)]
@@ -32,7 +49,7 @@ def goodmoves(me,you):
 	moves=[]
 	best=-float("inf"),False
 	for mex,mey in near(*me):
-		assert not a[mex][mey]
+		#assert not a[mex][mey]
 		a[mex][mey]=True
 		v=val((mex,mey),you)
 		a[mex][mey]=False
@@ -59,19 +76,45 @@ def wallhug(me,depth=3,theta=None):
 			return[(x,y)]
 	return[]
 angle=None
-for tron in TronClient("voronoi-0.1","35fad903-2ed3-4c95-8e91-bae44dbc52c3","localhost"):
-	if angle is None:
-		angle=cmp(tron.x,24)+1
-	me=tron.x,tron.y
-	you=next((i,j)for i in xrange(50)for j in xrange(49)if tron.full[i][j]and not a[i][j]and(i,j)!=me)
-	a=[[v for v in row]for row in tron.full]
-	try:
-		tron.x,tron.y=choice(goodmoves(me,you))
-		assert a==[[v for v in row]for row in tron.full]
-		assert not tron.full[tron.x][tron.y]
-		angle=circle(me).index((tron.x,tron.y))
-	except IndexError:
-		print"no good moves"
-		tron.x+=1
-	print"\n".join([" ".join("#"if y else" "for y in x)for x in reversed(zip(*tron.full))])
+import platform
+from time import time
+from sys import argv,setcheckinterval,maxint
+setcheckinterval(maxint)
+if platform.python_implementation()=="PyPy":
+	print"warmup start"
+	for i in xrange(30):
+		a[i][i]=True
+	for _ in xrange(20):
+		st=time()
+		goodmoves((0,0),(20,20))
+		print time()-st
+	for i in xrange(30):
+		a[i][i]=False
+	print"warmup end"
+with every(.09,.1)as guard:
+	for tron in TronClient("voronoi-0.1","35fad903-2ed3-4c95-8e91-bae44dbc52c3",*(argv[1:]or["localhost"])):
+		with guard:
+			try:
+				if angle is None:
+					angle=cmp(tron.x,24)+1
+				me=tron.x,tron.y
+				for i in xrange(50):
+					for j in xrange(49):
+						if tron.full[i][j]and not a[i][j]and(i,j)!=me:
+							you=i,j
+							break
+				a=[row[:]for row in tron.full]
+				try:
+					tron.x,tron.y=choice(goodmoves(me,you))
+					#assert a==[[v for v in row]for row in tron.full]
+					#assert not tron.full[tron.x][tron.y]
+					angle=circle(me).index((tron.x,tron.y))
+				except IndexError:
+					print"no good moves"
+					tron.x+=1
+				#print"\n".join([" ".join("#"if y else" "for y in x)for x in reversed(zip(*tron.full))])
+			except FrameSkip:
+				a=[row[:]for row in tron.full]
+				tron.x,tron.y=(wallhug(me)or[(me[0]+1,me[1])])[0]
+				print"frameskip"
 print tron

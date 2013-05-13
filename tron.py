@@ -6,7 +6,7 @@ from twisted.protocols.stateful import StatefulProtocol
 from random import shuffle
 from threading import Lock
 from struct import calcsize,unpack,pack
-from socket import create_connection,SHUT_RDWR
+from socket import create_connection,SHUT_RDWR,error
 from collections import Counter,Iterable
 import socket
 for const in"IPPROTO_TCP","TCP_QUICKACK","TCP_NODELAY":
@@ -14,7 +14,10 @@ for const in"IPPROTO_TCP","TCP_QUICKACK","TCP_NODELAY":
 def setsockopt(sock,level=IPPROTO_TCP,option=TCP_QUICKACK,value=1):
 	if level and option:
 		sock.setsockopt(level,option,value)
-from Tkinter import Tk,Canvas,ALL
+try:
+	from Tkinter import Tk,Canvas,ALL
+except ImportError:
+	pass
 from sys import argv
 STRUCT_DOWN_FRAME="<iii%ds"%((50*49+7)/8)
 STRUCT_UP_MOVE="<iii"
@@ -253,17 +256,26 @@ class TronClient(object):
 	def ended(self):
 		if not self.sock:
 			return True
-		try:
-			if self.t>=0:
-				assert abs(self._x-self.x)+abs(self._y-self.y)<=self.t-self._t
+		err=False
+		if self.t>=0:
+			assert abs(self._x-self.x)+abs(self._y-self.y)<=self.t-self._t and(self.t!=self._t+1 or(self._x-self.x)**2+(self._y-self.y)**2==1)
+			try:
 				self.sock.sendall(pack(STRUCT_UP_MOVE,self.t+1,self.x+1,self.y+1))
+			except IOError:
+				err=True
+		try:
 			self._recv()
 		except IOError:
+			err=True
+		if err:
 			self._close()
 		return not self.sock
 	def _close(self):
 		if self.sock:
-			self.sock.shutdown(SHUT_RDWR)
+			try:
+				self.sock.shutdown(SHUT_RDWR)
+			except error:
+				pass
 		try:
 			self.sock.close()
 		except:

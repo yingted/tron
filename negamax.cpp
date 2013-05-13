@@ -349,15 +349,22 @@ __ss_bool TronClient::ended() {
     if (__NOT(___bool(this->sock))) {
         return True;
     }
-    try {
-        if ((this->t>=0)) {
-            ASSERT(___bool(((__abs((this->_x-this->x))+__abs((this->_y-this->y)))<=(this->t-this->_t))), 0);
+    bool err=false;
+    if ((this->t>=0)) {
+        ASSERT(___bool(((__abs((this->_x-this->x))+__abs((this->_y-this->y)))<=(this->t-this->_t))), 0);
+        try {
             (this->sock)->sendall(pack(3, STRUCT_UP_MOVE, ___box(((this->t+1))), ___box(((this->x+1))), ___box(((this->y+1)))), 0);
+        } catch (IOError *) {
+            err=true;
         }
+    }
+    try {
         this->_recv();
     } catch (IOError *) {
-        this->_close();
+        err=true;
     }
+    if(err)
+        this->_close();
     return __NOT(___bool(this->sock));
 }
 

@@ -90,7 +90,6 @@ def val(me,you):
 	dyou=bfs(you)
 	for x,y in near(me[0],me[1]):
 		if dyou[x][y]is not OO:
-			"""
 			s=0
 			for i in xrange(50):
 				for j in xrange(49):
@@ -98,8 +97,6 @@ def val(me,you):
 					dy=dme[i][j]
 					s+=(dx>dy)-(dy>dx)
 			return s
-			"""
-			return sum(cmp(dx,dy)for row in map(zip,dyou,dme)for dx,dy in row)#"""
 	return 20*(sum(v is OO for row in dyou for v in row)-sum(v is OO for row in dme for v in row))+88*(sum(len(near(i,j))for i in xrange(50)for j in xrange(49)if dme[i][j]is not OO)-sum(len(near(i,j))for i in xrange(50)for j in xrange(49)if dyou[i][j]is not OO))
 def negamax((mex,mey),(youx,youy),depth,alpha,beta):
 	if not depth:
@@ -131,8 +128,10 @@ def alphabeta(me,you,alpha=-OO):
 	print"hope for",alpha
 	return moves
 from time import time
+#{
 import sys
 sys.setcheckinterval(sys.maxint)
+#}
 def main():
 	global a
 	tron=TronClient()
