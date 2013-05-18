@@ -50,17 +50,23 @@ class TronClient(object):
 			for j in xrange(49):
 				k=i*49+j
 				self.full[i][j]=(ord(a[k/8])>>(k%8))&1==1
-	def ended(self):
-		if not self.sock:
-			return True
-		try:
-			if self.t>=0:
-				assert abs(self._x-self.x)+abs(self._y-self.y)<=self.t-self._t
-				self.sock.sendall(pack(STRUCT_UP_MOVE,self.t+1,self.x+1,self.y+1))
-			self._recv()
-		except IOError:
-			self._close()
-		return not self.sock
+        def ended(self):
+                if not self.sock:
+                        return True
+                err=False
+                if self.t>=0:
+                        assert abs(self._x-self.x)+abs(self._y-self.y)<=self.t-self._t and(self.t!=self._t+1 or(self._x-self.x)**2+(self._y-self.y)**2==1)
+                        try:
+                                self.sock.sendall(pack(STRUCT_UP_MOVE,self.t+1,self.x+1,self.y+1))
+                        except IOError:
+                                err=True
+                try:
+                        self._recv()
+                except IOError:
+                        err=True
+                if err:
+                        self._close()
+                return not self.sock
 	def _close(self):
 		self.sock.shutdown(SHUT_RDWR)
 		try:
@@ -130,17 +136,24 @@ def alphabeta(me,you,alpha=-OO):
 from time import time
 #{
 import sys
-sys.setcheckinterval(sys.maxint)
+from sys import argv
+sys.setcheckinterval(2**31-1)
 #}
 def main():
 	global a
 	tron=TronClient()
+	host="localhost"
+	port=PORT
+	if len(argv)>1:
+		host=argv[1]
+		if len(argv)>2:
+			port=int(argv[2])
 	tron.start("negamax-0.1","35fad903-2ed3-4c95-8e91-bae44dbc52c3","localhost")
 	while not tron.ended():
 		starttime=time()
 		me=tron.x,tron.y
 		you=next((i,j)for i in xrange(50)for j in xrange(49)if tron.full[i][j]and not a[i][j]and(i,j)!=me)
-		a=[row[:]for row in tron.full]#shed skin hates me
+		a=[row[:]for row in tron.full]
 		#print"val",val(me,you)
 		moves=alphabeta(me,you)
 		if moves:

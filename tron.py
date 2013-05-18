@@ -88,7 +88,9 @@ class Game(object):
 		if self.over():
 			if self.delay:
 				self.loop.stop()
-			self.end(self)
+			if self.end:
+				self.end(self)
+				self.end=None
 		else:
 			for x,y,nx,ny in self.state:
 				self.grid[x][y]=True
@@ -164,8 +166,8 @@ class Tron(StatefulProtocol):
 		self.game.update(self.id,t-1,x-1,y-1)
 	@reads(STRUCT_UP_LOGIN)
 	def _login(self,user,pw):
-		user=user and user.rstrip('\0')
-		pw=pw and pw.rstrip('\0')
+		self.user=user and user.rstrip('\0')
+		self.pw=pw and pw.rstrip('\0')
 		return getstate(self._switch)
 	def connectionLost(self,reason):
 		self.game.next-=self._updateRemote
@@ -287,8 +289,22 @@ class TronClient(object):
 	def __repr__(self):
 		return"<"+self.__class__.__name__+"@%(dropped)d/%(t)d (%(x)d,%(y)d) %(outcome)s>"%self.__dict__
 if __name__=="__main__":
-	reactor.listenTCP(PORT,TronFactory(prefs={"delay":0}if"-d"in argv[1:]else{#delay=0 is good for debugging
-		"log":{},#use a plain dict for storage
-		"end":(lambda write,dumps:lambda self:write("\n"+dumps({"users":map(list,self.users),"winners":[i for i,v in enumerate(self.state)if v],"log":[[k[0],k[1],v[0],v[1]]for k,v in self.log.iteritems()]},separators=(",",":"))))(open("tron.%d.log"%PORT,"a",0).write,__import__("json").dumps),#this is not a proper logging solution, but it offers some locking, etc.
-	}if"-l"in argv[1:]else{}))
+	from argparse import ArgumentParser
+	p=ArgumentParser()
+	p.add_argument("-d","--delay",dest="delay",action="store",const=0,type=int,nargs="?",help="max frame delay or 0 for none")
+	p.add_argument("-l","--log",dest="log_prefix",action="store",const="tron-",nargs="?",help="produce game logs")
+	p.add_argument("-p","--port",dest="port",action="store",default=PORT,type=int,nargs=1,help="custom game port")
+	args=p.parse_args()
+	if args.delay is None:
+		del args.delay
+	prefs=dict((k,v)for k,v in vars(args).iteritems()if k in"delay",)
+	if args.log_prefix is not None:
+		prefs["log"]={}
+		from json import dumps
+		from datetime import datetime
+		def save(self):
+			with open("%s%d-%d.json"%(args.log_prefix,PORT,round((datetime.now()-datetime.fromtimestamp(0)).total_seconds()*1000000)),"w")as log:
+				log.write(dumps({"users":map(list,self.users),"winners":[i for i,v in enumerate(self.state)if v],"log":[[k[0],k[1],v[0],v[1]]for k,v in self.log.iteritems()]},separators=(",",":"),"delay":args.delay))
+		prefs["end"]=save
+	reactor.listenTCP(args.port,TronFactory(prefs=prefs))
 	reactor.run()
