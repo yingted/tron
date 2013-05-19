@@ -71,6 +71,7 @@ class Game(object):
 		self.users=[]
 		self.grid=[[False]*49 for _ in xrange(50)]
 		self.state=[(11,24,12,24),(38,24,37,24)]
+		init=kwargs.pop("__init__",None)
 		for k,v in kwargs.iteritems():
 			attr=getattr(self,k)
 			if isinstance(attr,Event):
@@ -81,7 +82,9 @@ class Game(object):
 			else:
 				setattr(self,k,v)
 		shuffle(self.state)
-		if self.log:
+		if init:
+			init(self)
+		if self.log is not None:
 			for i,st in enumerate(self.state):
 				self.log[i,-1]=st[:2]
 				self.log[i,0]=st[2:]
@@ -313,17 +316,19 @@ if __name__=="__main__":
 	if prefs["delay"]is None:
 		del prefs["delay"]
 	if args.log_prefix is not None:
-		prefs["log"]={}
 		from json import dump
 		from datetime import datetime
 		from itertools import groupby
+		def makelog(self):
+			self.log={}
+		prefs["__init__"]=makelog
 		def compress(self):
 			rle=[0]if self.grid[0][0]else[]
 			rle.extend([len(list(g))for k,g in groupby([v for row in self.grid for v in row])])
-			self.compressed_map=rle
+			self._compressed_map=rle
 		prefs["start"]=compress
 		def save(self):
-			log=[[]for _ in self.users]
+			log=[[]for _ in self.state]
 			for k,v in self.log.iteritems():
 				log[k[0]].append((k[1],v[0],v[1]))
 			winner=None
@@ -336,7 +341,7 @@ if __name__=="__main__":
 				"winner":winner,
 				"log":log,
 				"len":self.t,
-				"map":self.compressed_map,
+				"map":self._compressed_map,
 				"delay":args.delay,
 			}
 			with open("%s%d-%d.json"%(args.log_prefix,PORT,round((datetime.now()-datetime.fromtimestamp(0)).total_seconds()*1000000)),"w")as log:

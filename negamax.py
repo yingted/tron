@@ -83,11 +83,12 @@ def near(x,y):
 def bfs(me):
 	q=[me]
 	dist=[[OO]*49 for _ in xrange(50)]
-	dist[me[0]][me[1]]=0
+	dist[me[0]][me[1]]=0.
 	for x,y in q:
-		d=dist[x][y]+1
+		d=dist[x][y]+1.
 		for nx,ny in near(x,y):
-			if dist[nx][ny]is OO:
+			#if dist[nx][ny]is OO:
+			if dist[nx][ny]==OO:
 				dist[nx][ny]=d
 				q.append((nx,ny))
 	return dist
@@ -103,7 +104,8 @@ def val(me,you):
 					dy=dme[i][j]
 					s+=(dx>dy)-(dy>dx)
 			return s
-	return 20*(sum(v is OO for row in dyou for v in row)-sum(v is OO for row in dme for v in row))+88*(sum(len(near(i,j))for i in xrange(50)for j in xrange(49)if dme[i][j]is not OO)-sum(len(near(i,j))for i in xrange(50)for j in xrange(49)if dyou[i][j]is not OO))
+	return 20*(sum(v==OO for row in dyou for v in row)-sum(v==OO for row in dme for v in row))+88*(sum(len(near(i,j))for i in xrange(50)for j in xrange(49)if dme[i][j]!=OO)-sum(len(near(i,j))for i in xrange(50)for j in xrange(49)if dyou[i][j]is not OO))
+	#return 20*(sum(v is OO for row in dyou for v in row)-sum(v is OO for row in dme for v in row))+88*(sum(len(near(i,j))for i in xrange(50)for j in xrange(49)if dme[i][j]is not OO)-sum(len(near(i,j))for i in xrange(50)for j in xrange(49)if dyou[i][j]is not OO))
 def negamax((mex,mey),(youx,youy),depth,alpha,beta):
 	if not depth:
 		return val((mex,mey),(youx,youy))
@@ -134,8 +136,8 @@ def alphabeta(me,you,alpha=-OO):
 	print"hope for",alpha
 	return moves
 from time import time
-#{
 import sys
+#{
 sys.setcheckinterval(2**31-1)
 def main():
 	"""

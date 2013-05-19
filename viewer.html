@@ -104,6 +104,9 @@
 			.player1.head{
 				border-color:#fc9;
 			}
+			#map .player0.player1{
+				background-color:#c5c;
+			}
 			.head{
 				border-width:2px;
 				border-style:solid;
@@ -118,6 +121,7 @@
 			}
 		</style>
 		<script>
+		//XXX https://closure-compiler.appspot.com/code/jscac4dc7dd763e16ac9fbdd361f7993506/default.js
 			(function(){
 				var logRe=/^tron-(\d+)-(\d+)\.json$/,pagepath=location.pathname.split("/").slice(1,-1),index=null,lastcb=null,ready=false,$origFrame=null,preReset=new Function,delay,delta=null,msgs=null;
 				function reset(){
@@ -179,8 +183,8 @@
 								return cb.apply(this,arguments);
 						});
 					});
-					$("#frame").attr("disabled",true).data("rangeinput").setValue(1);
-					var old=0;
+					$("#frame").attr("disabled",true).data("rangeinput").setValue(0);
+					var old=-1;
 					$frame.bind("onSlide change",function(e){
 						setTimeout(function(){
 							if(!ready)
@@ -196,7 +200,7 @@
 								else
 									for(var di=delta[i],j=old;j>cur;--j)
 										full[di[j]].removeClass("player"+i);
-								if(old)
+								if(old>=0)
 									full[di[old]].removeClass("head");
 								full[di[cur]].addClass("head");
 							}
@@ -248,12 +252,12 @@
 									var name=o.users[id][0],$span=$("<span class='player"+id+"'>");
 									return name===null?$span.addClass("anon").text("guest"):$span.text(name);
 								}
-								msgs[1]=user(0).add(document.createTextNode(" vs ")).add(user(1));
+								msgs[0]=user(0).add(document.createTextNode(" vs ")).add(user(1));
 								delay=100;
 								if(o.delay!==null)
 									delay=Math.round(o.delay*1000);
 								else
-									msgs[1].add(document.createTextNode(" (no timeout)"));
+									msgs[0].add(document.createTextNode(" (no timeout)"));
 								for(var a=o.map,i=0,j=0;i<a.length;++i){
 									j+=a[i];
 									if(++i<a.length)
@@ -263,23 +267,29 @@
 								var pos=[[],[]];
 								for(var grid=[];grid.length<49;grid.push(false));
 								for(var grid=[grid];grid.length<50;grid.push(grid[0].slice(0)));
-								for(var i=0;i<2;++i){
-									var posi=pos[i];
+								for(var i=0;i<2;++i)
 									for(var a=o.log[i],j=0;j<a.length;++j)
-										posi[a[j][0]]=a[j].slice(1);
-									for(var j=1;j<=o.len;++j){
-										var prev=posi[j-2],cur=posi[j-1];
+										pos[i][a[j][0]]=a[j].slice(1);
+								for(var j=1;j<=o.len;++j){
+									var count={};
+									for(var i=0;i<2;++i){
+										var prev=pos[i][j-2],cur=pos[i][j-1];
 										grid[cur[0]][cur[1]]=true;
-										if(!posi[j]){
+										if(pos[i][j])
+											var x=pos[i][j][0],y=pos[i][j][1];
+										else
 											var x=cur[0]*2-prev[0],y=cur[1]*2-prev[1];
-											if(0<=x&&x<50&&0<=y&&y<49&&!grid[x][y])
-												posi[j]=[x,y];
-										}
+										if(0<=x&&x<50&&0<=y&&y<49&&!grid[x][y]){
+											var next=[x,y];
+											count[next]=(count[next]||0)+1;
+											pos[i][j]=next;
+										}else
+											pos[i][j]=null;
 									}
 								}
 								delta=[[],[]];
 								for(var i=0;i<2;++i)
-									for(var di=delta[i],posi=pos[i],j=1;j<=o.len;++j)
+									for(var di=delta[i],posi=pos[i],j=0;j<=o.len;++j)
 										di[j]=posi[j]?posi[j][0]*49+posi[j][1]:-1;
 								msgs[o.len]=o.winner===null?"tie":user(o.winner).add(document.createTextNode(" wins"));
 								$frame.trigger("onSlide");
@@ -312,7 +322,7 @@
 	<body>
 		<div id="player">
 			<div id="map"></div>
-			<input id="frame" disabled="disabled" type="range" min="1" max="1225" value="1" />
+			<input id="frame" disabled="disabled" type="range" min="0" max="1225" value="1" />
 			<div id="controls">
 				<span id="start">&#9198;</span>
 				<span id="rewind">&#9194;</span>
