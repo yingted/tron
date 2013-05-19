@@ -254,7 +254,7 @@
 								}
 								msgs[0]=user(0).add(document.createTextNode(" vs ")).add(user(1));
 								delay=100;
-								if(o.delay!==null)
+								if(o.delay)
 									delay=Math.round(o.delay*1000);
 								else
 									msgs[0].add(document.createTextNode(" (no timeout)"));
