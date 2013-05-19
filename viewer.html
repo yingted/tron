@@ -113,6 +113,9 @@
 				border-radius:2px;
 				margin:-1px;
 			}
+			.anon{
+				font-style:italic;
+			}
 		</style>
 		<script>
 			(function(){
@@ -242,7 +245,11 @@
 								msgs=[];
 								cls();
 								var $frame=$("#frame").attr("disabled",false);
-								msgs[1]=$("<span class='player0'>").text(o.users[0][0]).add(document.createTextNode(" vs ")).add($("<span class='player1'>").text(o.users[1][0]));
+								function user(id){
+									var name=o.users[id][0],$span=$("<span class='player"+id+"'>");
+									return name===null?$span.addClass("anon").text("guest"):$span.text(name);
+								}
+								msgs[1]=user(0).add(document.createTextNode(" vs ")).add(user(1));
 								delay=100;
 								if(o.delay!==null)
 									delay=Math.round(o.delay*1000);
@@ -269,7 +276,7 @@
 								for(var i=0;i<2;++i)
 									for(var di=delta[i],posi=pos[i],j=1;j<=o.len;++j)
 										di[j]=posi[j][0]*49+posi[j][1];
-								msgs[o.len]=o.winner===null?"tie":$("<span class='player"+o.winner+"'>").text(o.users[o.winner][0]).add(document.createTextNode(" wins"));
+								msgs[o.len]=o.winner===null?"tie":user(o.winner).add(document.createTextNode(" wins"));
 								$frame.trigger("onSlide");
 							};
 							$.getJSON(m[0],lastcb);
