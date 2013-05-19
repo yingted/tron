@@ -208,9 +208,8 @@
 				function cls(){
 					reset();
 					var $map=$("#map");
-					$map.find(".wall").removeClass("wall");
-					$map.find(".player0").removeClass("player0");
-					$map.find(".player1").removeClass("player1");
+					for(var a=["wall","player0","player1","head"],i=0;i<a.length;++i)
+						$map.find("."+a[i]).removeClass(a[i]);
 					$("#msg").text("");
 				}
 				function fetch(){
@@ -262,20 +261,26 @@
 											full[j].addClass("wall");
 								}
 								var pos=[[],[]];
+								for(var grid=[];grid.length<49;grid.push(false));
+								for(var grid=[grid];grid.length<50;grid.push(grid[0].slice(0)));
 								for(var i=0;i<2;++i){
 									var posi=pos[i];
 									for(var a=o.log[i],j=0;j<a.length;++j)
 										posi[a[j][0]]=a[j].slice(1);
 									for(var j=1;j<=o.len;++j){
 										var prev=posi[j-2],cur=posi[j-1];
-										if(!posi[j])
-											posi[j]=[cur[0]*2-prev[0],cur[1]*2-prev[1]]
+										grid[cur[0]][cur[1]]=true;
+										if(!posi[j]){
+											var x=cur[0]*2-prev[0],y=cur[1]*2-prev[1];
+											if(0<=x&&x<50&&0<=y&&y<49&&!grid[x][y])
+												posi[j]=[x,y];
+										}
 									}
 								}
 								delta=[[],[]];
 								for(var i=0;i<2;++i)
 									for(var di=delta[i],posi=pos[i],j=1;j<=o.len;++j)
-										di[j]=posi[j][0]*49+posi[j][1];
+										di[j]=posi[j]?posi[j][0]*49+posi[j][1]:-1;
 								msgs[o.len]=o.winner===null?"tie":user(o.winner).add(document.createTextNode(" wins"));
 								$frame.trigger("onSlide");
 							};
@@ -295,6 +300,7 @@
 						full.push(cell);
 						df.appendChild(cell[0]);
 					}
+				full[-1]=$();
 				$(function(){
 					$("#map").append(df);
 					reset();
