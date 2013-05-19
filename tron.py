@@ -8,6 +8,8 @@ from threading import Lock
 from struct import calcsize,unpack,pack
 from socket import create_connection,SHUT_RDWR,error
 from collections import Counter,Iterable
+from hashlib import sha512
+from base64 import urlsafe_b64encode
 import socket
 for const in"IPPROTO_TCP","TCP_QUICKACK","TCP_NODELAY":
 	globals()[const]=getattr(socket,const)if hasattr(socket,const)else 0
@@ -38,6 +40,12 @@ def reads(spec):
 	return decorator
 def getstate(handler):
 	return handler,handler.size
+salt=sha512()
+salt.update("5c425c0e-c1bc-4165-8735-690e80bdf19a")
+def pw_hash(pw):
+	m=salt.copy()
+	m.update(pw)
+	return urlsafe_b64encode(m.digest())
 class Event(object):
 	def __init__(self):
 		self.handlers=[]
@@ -132,7 +140,7 @@ class Game(object):
 		else:
 			print"received frame",t,"@",self.t
 	def over(self):
-		return len(filter(bool,self.state))>1
+		return None in self.state
 class Tron(StatefulProtocol):
 	def __init__(self,game):
 		self.game=game
@@ -172,8 +180,8 @@ class Tron(StatefulProtocol):
 		self.game.update(self.id,t-1,x-1,y-1)
 	@reads(STRUCT_UP_LOGIN)
 	def _login(self,user,pw):
-		self.user=user and user.rstrip('\0')
-		self.pw=pw and pw.rstrip('\0')
+		self.user=None if user is None else user.rstrip('\0')
+		self.pw=None if pw is None else pw_hash(pw.rstrip('\0'))
 		return getstate(self._switch)
 	def connectionLost(self,reason):
 		self.game.next-=self._updateRemote
@@ -300,65 +308,39 @@ if __name__=="__main__":
 	p.add_argument("-d","--delay",dest="delay",action="store",const=0,type=float,nargs="?",help="max frame delay or 0 for none")
 	p.add_argument("-l","--log",dest="log_prefix",action="store",const="tron-",nargs="?",help="produce game logs")
 	p.add_argument("-p","--port",dest="port",action="store",default=PORT,type=int,help="custom game port")
-	p.add_argument("-c","--clean",dest="clean",action="store",type=str,nargs=2,help="clean and copy directory")
 	args=p.parse_args()
-	if args.clean is not None:
-		from os import listdir,rename,mkdir
-		import re
-		from json import load,dump
-		pat=re.compile(r"\d+-\d+\.json")
-		files=listdir(args.clean[0])
-		try:
-			mkdir(clean[1]):
-		except:
-			pass
-		for fname in files:
-			if fname.startswith(args.log_prefix):
-				m=pat.match(fname[len(args.log_prefix):])
-				if m:
-					suffix="/"+args.log_prefix+m.group(0)
-					dest=args.clean[1]+path
-					data=None
-					with file(args.clean[0]+suffix)as f:
-						data=load(f)
-					for user in data["users"]:
-						user[1]=None
-					with file(dest+".tmp","w")as f:
-						dump(data,f)
-					rename(dest+".tmp",dest)
-	else:
-		prefs=dict((k,v)for k,v in vars(args).iteritems()if k in"delay",)
-		if prefs["delay"]is None:
-			del prefs["delay"]
-		if args.log_prefix is not None:
-			prefs["log"]={}
-			from json import dump
-			from datetime import datetime
-			from itertools import groupby
-			def compress(self):
-				rle=[0]if self.grid[0][0]else[]
-				rle.extend([len(list(g))for k,g in groupby([v for row in self.grid for v in row])])
-				self.compressed_map=rle
-			prefs["start"]=compress
-			def save(self):
-				log=[[]for _ in self.users]
-				for k,v in self.log.iteritems():
-					log[k[0]].append((k[1],v[0],v[1]))
-				winner=None
-				for i,v in enumerate(self.state):
-					if v:
-						winner=i
-						break
-				data={
-					"users":map(list,self.users),
-					"winner":winner,
-					"log":log,
-					"len":self.t,
-					"map":self.compressed_map,
-					"delay":args.delay,
-				}
-				with open("%s%d-%d.json"%(args.log_prefix,PORT,round((datetime.now()-datetime.fromtimestamp(0)).total_seconds()*1000000)),"w")as log:
-					dump(data,log,separators=(",",":"))
-			prefs["end"]=save
-		reactor.listenTCP(args.port,TronFactory(prefs=prefs))
-		reactor.run()
+	prefs=dict((k,v)for k,v in vars(args).iteritems()if k in"delay",)
+	if prefs["delay"]is None:
+		del prefs["delay"]
+	if args.log_prefix is not None:
+		prefs["log"]={}
+		from json import dump
+		from datetime import datetime
+		from itertools import groupby
+		def compress(self):
+			rle=[0]if self.grid[0][0]else[]
+			rle.extend([len(list(g))for k,g in groupby([v for row in self.grid for v in row])])
+			self.compressed_map=rle
+		prefs["start"]=compress
+		def save(self):
+			log=[[]for _ in self.users]
+			for k,v in self.log.iteritems():
+				log[k[0]].append((k[1],v[0],v[1]))
+			winner=None
+			for i,v in enumerate(self.state):
+				if v:
+					winner=i
+					break
+			data={
+				"users":map(list,self.users),
+				"winner":winner,
+				"log":log,
+				"len":self.t,
+				"map":self.compressed_map,
+				"delay":args.delay,
+			}
+			with open("%s%d-%d.json"%(args.log_prefix,PORT,round((datetime.now()-datetime.fromtimestamp(0)).total_seconds()*1000000)),"w")as log:
+				dump(data,log,separators=(",",":"))
+		prefs["end"]=save
+	reactor.listenTCP(args.port,TronFactory(prefs=prefs))
+	reactor.run()

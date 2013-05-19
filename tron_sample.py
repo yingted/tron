@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from tron import TronClient
 from random import random
-for tron in TronClient("pysamplebot-1.0","will never change: d9c77f23-ffac-4a1e-9f7b-f12b747895ce","localhost"):
+for tron in TronClient("pysamplebot-1.0","will never change: d9c77f23-ffac-4a1e-9f7b-f12b747895ce","localhost"):#authentication is not encrypted
 	tron.show=True
 	q=[]
 	for dx,dy in(-1,0),(1,0),(0,-1),(0,1):

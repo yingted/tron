@@ -1,6 +1,6 @@
 include"tron.tu"
 tron.startlogin("samplebot-1.0",
-    "will never change: d9c77f23-ffac-4a1e-9f7b-f12b747895ce",
+    "will never change: d9c77f23-ffac-4a1e-9f7b-f12b747895ce",%authentication is not encrypted
     "localhost",
     12345)
 tron.show:=true
