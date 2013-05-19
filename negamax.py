@@ -136,19 +136,23 @@ def alphabeta(me,you,alpha=-OO):
 from time import time
 #{
 import sys
-from sys import argv
 sys.setcheckinterval(2**31-1)
-#}
 def main():
+	"""
+#}
+if True:
+#{
+"""
 	global a
+	#}
 	tron=TronClient()
 	host="localhost"
 	port=PORT
-	if len(argv)>1:
-		host=argv[1]
-		if len(argv)>2:
-			port=int(argv[2])
-	tron.start("negamax-0.1","35fad903-2ed3-4c95-8e91-bae44dbc52c3","localhost")
+	if len(sys.argv)>1:
+		host=sys.argv[1]
+		if len(sys.argv)>2:
+			port=int(sys.argv[2])
+	tron.start("negamax-0.1","35fad903-2ed3-4c95-8e91-bae44dbc52c3",host,port)
 	while not tron.ended():
 		starttime=time()
 		me=tron.x,tron.y
@@ -163,6 +167,8 @@ def main():
 			tron.x+=1
 		print time()-starttime
 	print tron
+#{
 main()
 #import cProfile
 #cProfile.run("main()")
+#}

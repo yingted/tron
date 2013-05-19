@@ -1,0 +1,314 @@
+<!DOCTYPE HTML>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<!--<meta http-equiv="refresh" content="1">-->
+		<title>log viewer</title>
+		<!--<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>-->
+		<script src="http://cdn.jquerytools.org/1.2.7/full/jquery.tools.min.js"></script>
+		<style>
+			.cell{
+				position:absolute;
+				background-color:#fff;
+				border:1px solid #000;
+				width:7px;
+				height:7px;
+			}
+			#controls{
+				text-align:center;
+				width:100%;
+				cursor:default;
+				font-size:35px;
+				-webkit-touch-callout: none;
+				-webkit-user-select: none;
+				-khtml-user-select: none;
+				-moz-user-select: none;
+				-ms-user-select: none;
+				user-select: none;
+			}
+			#controls.ready span{
+				cursor:pointer;
+			}
+			#controls.ready span.active{
+				background-color:#ffc;
+				margin:-3px;
+				border:3px inset;
+			}
+			#controls.ready span:hover{
+				background-color:#ff0;
+			}
+			#links{
+				float:left;
+			}
+			#map{/*hashmap?*/
+				position:relative;
+				width:401px;
+				height:393px;
+			}
+			#msg{
+				max-height:3em;
+			}
+			#player{
+				float:left;
+				width:401px;
+			}
+			.slider{
+				background-color:#777;
+				height:10px;
+				position:relative;
+				cursor:pointer;
+				border:1px solid #333;
+				margin:10px 0;
+				width:100%;
+				margin-left:-1px;
+			}
+			.progress{
+				height:10px;
+				background-color:#C5FF00;
+			}
+			.handle{
+				background-color:#fff;
+				height:28px;
+				width:28px;
+				top:-12px;
+				position:absolute;
+				display:block;
+				margin-top:2px;
+				margin-left:-1px;
+				border:1px solid #000;
+				cursor:move;
+			}
+			.range{
+				float:right;
+				margin-top:5px;
+				font-size:20px;
+				text-align:center;
+				width:3em;
+			}
+			#map .wall{
+				background-color:#777;
+			}
+			#map .player0{
+				background-color:#33f;
+			}
+			.player0.head{
+				border-color:#99f;
+			}
+			#msg .player0{
+				color:#33f;
+			}
+			#map .player1{
+				background-color:#f83;
+			}
+			#msg .player1{
+				color:#f83;
+			}
+			.player1.head{
+				border-color:#fc9;
+			}
+			.head{
+				border-width:2px;
+				border-style:solid;
+				z-index:1;
+				-webkit-border-radius:2px;
+				-moz-border-radius:2px;
+				border-radius:2px;
+				margin:-1px;
+			}
+		</style>
+		<script>
+			(function(){
+				var logRe=/^tron-(\d+)-(\d+)\.json$/,pagepath=location.pathname.split("/").slice(1,-1),index=null,lastcb=null,ready=false,$origFrame=null,preReset=new Function,delay,delta=null,msgs=null;
+				function reset(){
+					preReset();
+					if($origFrame===null)
+						$origFrame=($frame=$("#frame")).clone().attr("disabled",false);
+					else{
+						$("#frame").replaceWith($frame=$origFrame.clone());
+						$frame.prev(".slider").remove();
+					}
+					var $frame=$frame.rangeinput({progress:true}),slider=$frame.data("rangeinput"),intv=null,$active=null,dt=0;
+					function prev(){
+						slider.step(-1);
+					}
+					function pause(){
+						if(intv===null)
+							return;
+						clearInterval(intv);
+						$active.removeClass("active");
+						$active=intv=null;
+						dt=0;
+					}
+					function next(){
+						slider.step(1);
+					}
+					$.each({
+						start:function(){
+							slider.setValue(+$frame.attr("min"));
+						},
+						rewind:function(){
+							if(dt===-1){
+								pause();
+								return;
+							}
+							pause();
+							intv=setInterval(prev,delay);
+							$active=$(this).addClass("active");
+							dt=-1;
+						},
+						prev:prev,
+						pause:pause,
+						next:next,
+						play:function(){
+							if(dt===1){
+								pause();
+								return;
+							}
+							pause();
+							intv=setInterval(next,delay);
+							$active=$(this).addClass("active");
+							dt=1;
+						},
+						end:function(){
+							slider.setValue(+$frame.attr("max"));
+						},
+					},function(id,cb){
+						$("#"+id).unbind("click").click(function(){
+							if(ready)
+								return cb.apply(this,arguments);
+						});
+					});
+					$("#frame").attr("disabled",true).data("rangeinput").setValue(1);
+					var old=0;
+					$frame.bind("onSlide change",function(e){
+						setTimeout(function(){
+							if(!ready)
+								return;
+							var cur=slider.getValue();
+							if(old===cur)
+								return;
+							$("#msg").empty().append(msgs[cur]||"");
+							for(var i=0;i<2;++i){
+								if(old<cur)
+									for(var di=delta[i],j=old+1;j<=cur;++j)
+										full[di[j]].addClass("player"+i);
+								else
+									for(var di=delta[i],j=old;j>cur;--j)
+										full[di[j]].removeClass("player"+i);
+								if(old)
+									full[di[old]].removeClass("head");
+								full[di[cur]].addClass("head");
+							}
+							old=cur;
+						},0);
+					});
+					preReset=pause;
+				}
+				function cls(){
+					reset();
+					var $map=$("#map");
+					$map.find(".wall").removeClass("wall");
+					$map.find(".player0").removeClass("player0");
+					$map.find(".player1").removeClass("player1");
+					$("#msg").text("");
+				}
+				function fetch(){
+					var $links=$("#links");
+					if(!index||!$links)
+						return;
+					$links.append($(index).find("a").map(function(i,e){
+						var path=e.pathname.split("/").slice(1);
+						if(path.length!==pagepath.length+1)
+							return null;
+						for(var i=0;i<pagepath.length;++i)
+							if(path[i]!==pagepath[i])
+								return null;
+						var m=path[path.length-1].match(logRe);
+						if(!m)
+							return null;
+						return[$("<a>").attr("href",m[0]).text(m[1]+" "+new Date(m[2]/1000)).click(function(e){
+							e.preventDefault();
+							ready=false;
+							$("#controls").removeClass("ready");
+							lastcb=function cb(o){
+								if(lastcb!=cb)
+									return;
+								if(!o||o.users.length<2||!o.log.length){
+									cls();
+									$("#msg").text("invalid log");
+									return;
+								}
+								ready=true;
+								$("#controls").addClass("ready");
+								$origFrame.attr("max",o.len);
+								msgs=[];
+								cls();
+								var $frame=$("#frame").attr("disabled",false);
+								delay=o.delay===null?100:Math.round(o.delay*1000);
+								msgs[1]=$("<span class='player0'>").text(o.users[0][0]).add(document.createTextNode(" vs ")).add($("<span class='player1'>").text(o.users[1][0]));
+								for(var a=o.map,i=0,j=0;i<a.length;++i){
+									j+=a[i];
+									if(++i<a.length)
+										for(var k=a[i];k--;++j)
+											full[j].addClass("wall");
+								}
+								var pos=[[],[]];
+								for(var i=0;i<2;++i){
+									var posi=pos[i];
+									for(var a=o.log[i],j=0;j<a.length;++j)
+										posi[a[j][0]]=a[j].slice(1);
+									for(var j=1;j<=o.len;++j){
+										var prev=posi[j-2],cur=posi[j-1];
+										if(!posi[j])
+											posi[j]=[cur[0]*2-prev[0],cur[1]*2-prev[1]]
+									}
+								}
+								delta=[[],[]];
+								for(var i=0;i<2;++i)
+									for(var di=delta[i],posi=pos[i],j=1;j<=o.len;++j)
+										di[j]=posi[j][0]*49+posi[j][1];
+								msgs[o.len]=o.winner===null?"tie":$("<span class='player"+o.winner+"'>").text(o.users[o.winner][0]).add(document.createTextNode(" wins"));
+								$frame.trigger("onSlide");
+							};
+							$.getJSON(m[0],lastcb);
+						})[0],$("<br>")[0]];
+					}));
+					index=null;
+				}
+				$.ajax(".").done(function(d){
+					index=d;
+					fetch();
+				})
+				var full=[],df=document.createDocumentFragment();//XXX switch to 1 idx
+				for(var i=49;i>=0;--i)
+					for(var j=0;j<49;++j){
+						var cell=$("<div>").addClass("cell").css({left:i*8,top:j*8});
+						full.push(cell);
+						df.appendChild(cell[0]);
+					}
+				$(function(){
+					$("#map").append(df);
+					reset();
+					fetch();
+				});
+			})();
+		</script>
+	</head>
+	<body>
+		<div id="player">
+			<div id="map"></div>
+			<input id="frame" disabled="disabled" type="range" min="1" max="1225" value="1" />
+			<div id="controls">
+				<span id="start">&#9198;</span>
+				<span id="rewind">&#9194;</span>
+				<span id="prev">&#9205;</span>
+				<span id="pause">&#9208;</span>
+				<span id="next">&#9204;</span>
+				<span id="play">&#9193;</span>
+				<span id="end">&#9197;</span>
+			</div>
+			<div id="msg">click a log</div>
+		</div>
+		<div id="links"></div>
+	</body>
+</html><!-- vim:set ts=4 sw=4 fdm=indent:-->

@@ -56,6 +56,7 @@ class Game(object):
 		self.delay=.1
 		self.lock=Lock()
 		self.next=Event()
+		self.start=Event()
 		self.next+=self._advance
 		self.end=Event()
 		self.log=None
@@ -72,6 +73,10 @@ class Game(object):
 			else:
 				setattr(self,k,v)
 		shuffle(self.state)
+		if self.log:
+			for i,st in enumerate(self.state):
+				self.log[i,-1]=st[:2]
+				self.log[i,0]=st[2:]
 		self.t=-1
 		if not self.delay:
 			self.ready=[False]*2
@@ -106,6 +111,7 @@ class Game(object):
 			return
 		yield i
 		if len(self.users)==2:
+			self.start(self)
 			if self.delay:
 				self.loop=LoopingCall(self.next)
 				self.loop.start(self.delay)
@@ -126,7 +132,7 @@ class Game(object):
 		else:
 			print"received frame",t,"@",self.t
 	def over(self):
-		return None in self.state
+		return len(filter(bool,self.state))>1
 class Tron(StatefulProtocol):
 	def __init__(self,game):
 		self.game=game
@@ -291,20 +297,62 @@ class TronClient(object):
 if __name__=="__main__":
 	from argparse import ArgumentParser
 	p=ArgumentParser()
-	p.add_argument("-d","--delay",dest="delay",action="store",const=0,type=int,nargs="?",help="max frame delay or 0 for none")
+	p.add_argument("-d","--delay",dest="delay",action="store",const=0,type=float,nargs="?",help="max frame delay or 0 for none")
 	p.add_argument("-l","--log",dest="log_prefix",action="store",const="tron-",nargs="?",help="produce game logs")
 	p.add_argument("-p","--port",dest="port",action="store",default=PORT,type=int,nargs=1,help="custom game port")
+	p.add_argument("-c","--clean",dest="clean",action="store",type=str,const=".",nargs="?",help="clean directory")
 	args=p.parse_args()
-	if args.delay is None:
-		del args.delay
-	prefs=dict((k,v)for k,v in vars(args).iteritems()if k in"delay",)
-	if args.log_prefix is not None:
-		prefs["log"]={}
-		from json import dumps
-		from datetime import datetime
-		def save(self):
-			with open("%s%d-%d.json"%(args.log_prefix,PORT,round((datetime.now()-datetime.fromtimestamp(0)).total_seconds()*1000000)),"w")as log:
-				log.write(dumps({"users":map(list,self.users),"winners":[i for i,v in enumerate(self.state)if v],"log":[[k[0],k[1],v[0],v[1]]for k,v in self.log.iteritems()]},separators=(",",":"),"delay":args.delay))
-		prefs["end"]=save
-	reactor.listenTCP(args.port,TronFactory(prefs=prefs))
-	reactor.run()
+	if args.clean is not None:
+		from os import listdir,rename
+		import re
+		from json import load,dump
+		pat=re.compile(r"\d+-\d+\.json")
+		for fname in listdir(args.clean):
+			if fname.startswith(args.log_prefix):
+				m=pat.match(fname[len(args.log_prefix):])
+				if m:
+					path=args.clean+"/"+args.log_prefix+m.group(0)
+					data=None
+					with file(path)as f:
+						data=load(f)
+					for user in data["users"]:
+						user[1]=None
+					with file(path+".tmp","w")as f:
+						dump(data,f)
+					rename(path+".tmp",path)
+	else:
+		prefs=dict((k,v)for k,v in vars(args).iteritems()if k in"delay",)
+		if prefs["delay"]is None:
+			del prefs["delay"]
+		if args.log_prefix is not None:
+			prefs["log"]={}
+			from json import dump
+			from datetime import datetime
+			from itertools import groupby
+			def compress(self):
+				rle=[0]if self.grid[0][0]else[]
+				rle.extend([len(list(g))for k,g in groupby([v for row in self.grid for v in row])])
+				self.compressed_map=rle
+			prefs["start"]=compress
+			def save(self):
+				log=[[]for _ in self.users]
+				for k,v in self.log.iteritems():
+					log[k[0]].append((k[1],v[0],v[1]))
+				winner=None
+				for i,v in enumerate(self.state):
+					if v:
+						winner=i
+						break
+				data={
+					"users":map(list,self.users),
+					"winner":winner,
+					"log":log,
+					"len":self.t,
+					"map":self.compressed_map,
+					"delay":args.delay,
+				}
+				with open("%s%d-%d.json"%(args.log_prefix,PORT,round((datetime.now()-datetime.fromtimestamp(0)).total_seconds()*1000000)),"w")as log:
+					dump(data,log,separators=(",",":"))
+			prefs["end"]=save
+		reactor.listenTCP(args.port,TronFactory(prefs=prefs))
+		reactor.run()
