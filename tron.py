@@ -299,27 +299,33 @@ if __name__=="__main__":
 	p=ArgumentParser()
 	p.add_argument("-d","--delay",dest="delay",action="store",const=0,type=float,nargs="?",help="max frame delay or 0 for none")
 	p.add_argument("-l","--log",dest="log_prefix",action="store",const="tron-",nargs="?",help="produce game logs")
-	p.add_argument("-p","--port",dest="port",action="store",default=PORT,type=int,nargs=1,help="custom game port")
-	p.add_argument("-c","--clean",dest="clean",action="store",type=str,const=".",nargs="?",help="clean directory")
+	p.add_argument("-p","--port",dest="port",action="store",default=PORT,type=int,help="custom game port")
+	p.add_argument("-c","--clean",dest="clean",action="store",type=str,nargs=2,help="clean and copy directory")
 	args=p.parse_args()
 	if args.clean is not None:
-		from os import listdir,rename
+		from os import listdir,rename,mkdir
 		import re
 		from json import load,dump
 		pat=re.compile(r"\d+-\d+\.json")
-		for fname in listdir(args.clean):
+		files=listdir(args.clean[0])
+		try:
+			mkdir(clean[1]):
+		except:
+			pass
+		for fname in files:
 			if fname.startswith(args.log_prefix):
 				m=pat.match(fname[len(args.log_prefix):])
 				if m:
-					path=args.clean+"/"+args.log_prefix+m.group(0)
+					suffix="/"+args.log_prefix+m.group(0)
+					dest=args.clean[1]+path
 					data=None
-					with file(path)as f:
+					with file(args.clean[0]+suffix)as f:
 						data=load(f)
 					for user in data["users"]:
 						user[1]=None
-					with file(path+".tmp","w")as f:
+					with file(dest+".tmp","w")as f:
 						dump(data,f)
-					rename(path+".tmp",path)
+					rename(dest+".tmp",dest)
 	else:
 		prefs=dict((k,v)for k,v in vars(args).iteritems()if k in"delay",)
 		if prefs["delay"]is None:

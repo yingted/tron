@@ -2,9 +2,7 @@
 <html lang="en">
 	<head>
 		<meta charset="UTF-8">
-		<!--<meta http-equiv="refresh" content="1">-->
 		<title>log viewer</title>
-		<!--<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>-->
 		<script src="http://cdn.jquerytools.org/1.2.7/full/jquery.tools.min.js"></script>
 		<style>
 			.cell{
@@ -244,8 +242,12 @@
 								msgs=[];
 								cls();
 								var $frame=$("#frame").attr("disabled",false);
-								delay=o.delay===null?100:Math.round(o.delay*1000);
 								msgs[1]=$("<span class='player0'>").text(o.users[0][0]).add(document.createTextNode(" vs ")).add($("<span class='player1'>").text(o.users[1][0]));
+								delay=100;
+								if(o.delay!==null)
+									delay=Math.round(o.delay*1000);
+								else
+									msgs[1].add(document.createTextNode(" (no timeout)"));
 								for(var a=o.map,i=0,j=0;i<a.length;++i){
 									j+=a[i];
 									if(++i<a.length)
@@ -279,7 +281,7 @@
 					index=d;
 					fetch();
 				})
-				var full=[],df=document.createDocumentFragment();//XXX switch to 1 idx
+				var full=[],df=document.createDocumentFragment();
 				for(var i=49;i>=0;--i)
 					for(var j=0;j<49;++j){
 						var cell=$("<div>").addClass("cell").css({left:i*8,top:j*8});
