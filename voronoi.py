@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 from tron import TronClient
 from random import choice
 from signal import signal,setitimer,SIGALRM,SIG_IGN,SIG_DFL,ITIMER_REAL

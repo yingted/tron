@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 from tron import TronClient,STRUCT_UP_MOVE,pack
 from thread import start_new_thread,allocate_lock
 from Tkinter import Tk,Canvas

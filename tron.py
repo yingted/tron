@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 from twisted.internet import reactor
 from twisted.internet.protocol import Factory
 from twisted.internet.task import LoopingCall

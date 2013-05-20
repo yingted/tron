@@ -1,7 +1,7 @@
 TUSRC=$(wildcard *.t*)
-PYSRC=tron_sample.py tron.py
+PYSRC=tron_sample.py tron.py tron_tester.py
 SRC=$(TUSRC) $(PYSRC)
-OUT=tron.zip tron-win32.zip negamax/negamax negamax_bin
+OUT=tron.zip tron-win32.zip negamax/negamax negamax_bin negamax4_bin
 CPPFLAGS=-Ofast -ffast-math -fomit-frame-pointer
 export CPPFLAGS
 all:$(OUT)
@@ -10,13 +10,15 @@ tron-win32-support/__main__.py:tron.py
 tron-win32:tron-win32-support/__main__.py $(SRC)
 	rm -rf tron-win32/
 	mkdir tron-win32/
-	cp tron_sample.py $(TUSRC) tron-win32/
+	cp tron_{sample,tester}.py $(TUSRC) tron-win32/
 	cp tron-win32.py tron-win32/tron.py
 	cd tron-win32-support/ && zip -rq ../tron-win32/tron-win32-support.zip * -x \*.pyc
 tron-win32.zip:tron-win32
-	zip -rq $@ $<
+	rm -f $@
+	cd $</ && zip -rq ../$@ .
 tron.zip:$(SRC)
-	zip tron.zip $(SRC)
+	rm -f $@
+	zip $@ $(SRC)
 mainline:
 	git clone git://gitorious.org/shedskin/mainline.git
 	cd mainline && python setup.py build
@@ -61,6 +63,9 @@ HPPFILES=negamax.hpp \
 
 negamax_bin:	$(CPPFILES) $(HPPFILES)
 	$(CC)  $(CCFLAGS) $(CPPFILES) $(LFLAGS) -o negamax_bin
+
+negamax4_bin:	$(CPPFILES) $(HPPFILES)
+	$(CC)  $(CCFLAGS) $(CPPFILES) $(LFLAGS) -DDEPTH=4 -o negamax4_bin
 
 negamax_prof:	$(CPPFILES) $(HPPFILES)
 	$(CC) -pg -ggdb $(CCFLAGS) $(CPPFILES) $(LFLAGS) -o negamax_prof

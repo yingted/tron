@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 from tron import TronClient
 from random import random
 for tron in TronClient("pysamplebot-1.0","will never change: d9c77f23-ffac-4a1e-9f7b-f12b747895ce","localhost"):#authentication is not encrypted

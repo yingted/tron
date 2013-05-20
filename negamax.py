@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 from struct import calcsize,unpack,pack
 import socket
 TCP_NODELAY=1
