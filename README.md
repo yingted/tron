@@ -18,5 +18,6 @@ Run `make tron-win32.zip` to package `twisted` and `zope` for Windows users.
 `tron_tester.py` accepts keyboard input for the bot.
 #### Strong bots
 `voronoi.py` and `negamax.py` are examples of stronger bots. Compiled and optimized binaries are included.
+They're based off of: http://www.a1k0n.net/2010/03/04/google-ai-postmortem.html
 ### Custom
 You can import `tron.tu` or `tron.py` and make your own bot. You need a bot name and unique key (for tracking wins and losses). Encryption is not supported. See `tron_sample.*` for examples.
